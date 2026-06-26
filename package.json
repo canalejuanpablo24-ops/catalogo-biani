@@ -1,0 +1,9 @@
+{
+  "name": "catalogo-biani",
+  "version": "1.0.0",
+  "description": "Catálogo de productos auto-sincronizado con Airtable",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "dependencies": {}
+}
