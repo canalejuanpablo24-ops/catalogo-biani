@@ -1,5 +1,6 @@
 const fs = require('fs');
 const https = require('https');
+const path = require('path');
 
 // Read environment variables
 const token = process.env.AIRTABLE_TOKEN;
@@ -9,6 +10,31 @@ const tableName = process.env.AIRTABLE_TABLE_NAME || "Productos BIANI";
 if (!token || !baseId) {
   console.error("Error: AIRTABLE_TOKEN and AIRTABLE_BASE_ID must be set in environment variables.");
   process.exit(1);
+}
+
+// Asegurar que la carpeta de imágenes exista
+const imgDir = path.join(__dirname, 'imagenes_productos');
+if (!fs.existsSync(imgDir)){
+    fs.mkdirSync(imgDir, { recursive: true });
+}
+
+// Función auxiliar para descargar imágenes de forma segura
+function downloadImage(url, dest) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(dest);
+    https.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        reject(new Error(`Failed to download image: HTTP ${response.statusCode}`));
+        return;
+      }
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(resolve);
+      });
+    }).on('error', (err) => {
+      fs.unlink(dest, () => reject(err));
+    });
+  });
 }
 
 // Fetch records from Airtable
@@ -50,7 +76,7 @@ async function getAllProducts() {
   let allRecords = [];
   let offset = '';
   console.log("Fetching products from Airtable...");
-  
+
   while (true) {
     const res = await fetchAirtableRecords(offset);
     allRecords = allRecords.concat(res.records);
@@ -58,10 +84,9 @@ async function getAllProducts() {
     if (!offset) {
       break;
     }
-    // Rate limit sleep (Airtable allows 5 requests/sec, 200ms sleep is safe)
     await new Promise(r => setTimeout(r, 220));
   }
-  
+
   console.log(`Fetched ${allRecords.length} records.`);
   return allRecords;
 }
@@ -69,14 +94,16 @@ async function getAllProducts() {
 // Category array matching index.html
 const CA = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "R", "S", "T", "V", "Y", "Z"];
 
-function mapRecordsToProducts(records) {
-  return records.map(r => {
+async function mapRecordsToProducts(records) {
+  const mapped = [];
+  
+  for (const r of records) {
     const f = r.fields;
     const code = f["Codigo"] || "";
     const name = f["Name"] || "";
     const price_dec = f["Precio"] || 0;
     const price_cents = Math.round(price_dec * 100);
-    
+
     // Map category
     let cat_letter = f["Categoria"] || "";
     if (!cat_letter && name) {
@@ -86,46 +113,65 @@ function mapRecordsToProducts(records) {
     if (cat_idx < 0) {
       cat_idx = 0;
     }
-    
-    // Image attachment
-    let img_url = "";
+
+    // Lógica nueva: Descargar imagen localmente si existe
+    let final_img_path = "";
     if (f["Imagen"] && f["Imagen"].length > 0) {
-      img_url = f["Imagen"][0].url || "";
+      const airtable_img_url = f["Imagen"][0].url || "";
+      if (airtable_img_url && code) {
+        // Limpiamos el código para usarlo de nombre de archivo seguro
+        const safeCode = String(code).replace(/[^a-zA-Z0-9]/g, "_");
+        const fileName = `prod_${safeCode}.jpg`;
+        const destPath = path.join(imgDir, fileName);
+        
+        try {
+          console.log(`Downloading image for product: ${name || code}`);
+          await downloadImage(airtable_img_url, destPath);
+          // Esta ruta relativa es la que va a leer tu index.html
+          final_img_path = `imagenes_productos/${fileName}`;
+        } catch (imgErr) {
+          console.error(`Could not download image for ${code}:`, imgErr.message);
+          final_img_path = ""; // Si falla, queda vacío pero no rompe el proceso
+        }
+      }
     }
-    
-    return {
+
+    mapped.push({
       c: code,
       n: name,
       p: price_cents,
-      img: img_url,
+      img: final_img_path,
       cat: cat_idx,
       st: 0
-    };
-  });
+    });
+  }
+  
+  return mapped;
 }
 
 async function run() {
   try {
     const records = await getAllProducts();
-    const products = mapRecordsToProducts(records);
-    
+    // Agregamos el await porque ahora la descarga lleva tiempo
+    const products = await mapRecordsToProducts(records);
+
     // Read index.html
     console.log("Reading index.html...");
     let html = fs.readFileSync('index.html', 'utf8');
-    
+
     // Replace the var P declaration
     const productsJson = JSON.stringify(products);
     const pRegex = /^var P\s*=\s*\[[\s\S]*?\];/m;
-    
+
     if (!pRegex.test(html)) {
       throw new Error("Could not find 'var P=[...];' declaration in index.html");
     }
-    
+
     html = html.replace(pRegex, `var P = ${productsJson};`);
-    
+
     // Write back index.html
     fs.writeFileSync('index.html', html, 'utf8');
-    console.log("index.html updated successfully with new Airtable data!");
+    console.log("index.html updated successfully with local image paths!");
   } catch (err) {
     console.error("Build failed:", err);
     process.exit(1);
