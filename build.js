@@ -24,7 +24,7 @@ base(tableName).select({
     const fields = record.fields;
     
     // Si el registro no tiene nombre ni precio, lo saltamos para evitar errores
-    if (!fields["Name"]) return;
+    if (!fields["Articulo"]) return;
 
     productos.push({
       id: record.id,
