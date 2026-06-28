@@ -30,7 +30,7 @@ base(tableName).select({
         id: record.id,
         nombre: fields["Articulo"],
         codigo: fields["Código"] || "",
-        precio: fields["Precio"] || 0,
+        precio: fields["precio"] || 0,
         imagen: fields["Imagen"] && fields["Imagen"].length > 0 ? fields["Imagen"][0].url : "",
         categoria: fields["Categoria"] || "General"
     });
