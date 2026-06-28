@@ -1,33 +1,43 @@
-name: Deploy Automático desde Airtable
+name: Deploy Automático a GitHub Pages
 
 on:
+  push:
+    branches:
+      - main
   repository_dispatch:
-    types: [update-catalog]
+    types: [airtable-update]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Clonar repositorio
+      - name: Descargar código del repositorio
         uses: actions/checkout@v4
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: node/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
 
-      - name: Instalar dependencias y actualizar datos
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar catálogo desde Airtable
         env:
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
-        run: |
-          npm install
-          node build.js
+          AIRTABLE_TABLE_NAME: "Productos BIANI"
+        run: node build.js
 
-      - name: Desplegar en Netlify
-        uses: netlify/actions/cli@master
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      - name: Subir a GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          args: deploy --dir=. --prod
+          branch: main
+          folder: .
