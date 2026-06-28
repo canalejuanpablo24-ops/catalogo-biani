@@ -489,8 +489,8 @@ async function cargarDatosAirtable() {
             }
 
             return {
-                c: record.fields.Codigo ? record.fields.Codigo.toString() : "", 
-                n: record.fields.Name || "", 
+                c: record.fields.Código ? record.fields.Código.toString() : "", 
+                n: record.fields.Articulo || "", 
                 p: record.fields.Precio || 0,  
                 img: imgUrl
             };
