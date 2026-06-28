@@ -56,3 +56,4 @@ base(tableName).select({
 
   console.log(`¡Éxito! Se procesaron ${productos.length} productos.`);
 });
+    
