@@ -28,8 +28,8 @@ base(tableName).select({
 
     productos.push({
       id: record.id,
-      nombre: fields["Name"],
-      codigo: fields["Codigo"] || "",
+      nombre: fields["Articulo"],
+      codigo: fields["Código"] || "",
       precio: fields["Precio"] ? Number(fields["Precio"]) : 0, 
       imagen: fields["Imagen"] && fields["Imagen"].length > 0 ? fields["Imagen"][0].url : "https://via.placeholder.com/150",
       categoria: fields["Categoria"] || "General"
