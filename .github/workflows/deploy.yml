@@ -17,6 +17,9 @@ jobs:
           node-version: 18
 
       - name: Instalar dependencias y actualizar datos
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
         run: |
           npm install
           node build.js
