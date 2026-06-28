@@ -26,13 +26,13 @@ base(tableName).select({
     // Si el registro no tiene nombre ni precio, lo saltamos para evitar errores
     if (!fields["Articulo"]) return;
 
-    productos.push({
-      id: record.id,
-      nombre: fields["Articulo"],
-      codigo: fields["Código"] || "",
-      precio: fields["Precio"] || 0, 
-      imagen: fields["Imagen"] && fields["Imagen"].length > 0 ? fields["Imagen"][0].url : "https://via.placeholder.com/150",
-      categoria: fields["Categoria"] || "General"
+   productos.push({
+        id: record.id,
+        nombre: fields["Articulo"],
+        codigo: fields["Código"] || "",
+        precio: fields["Precio"] || 0,
+        imagen: fields["Imagen"] && fields["Imagen"].length > 0 ? fields["Imagen"][0].url : "",
+        categoria: fields["Categoria"] || "General"
     });
   });
 
