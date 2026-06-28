@@ -1,9 +1,7 @@
-
 const Airtable = require('airtable');
 const fs = require('fs');
 const path = require('path');
 
-// Configuración de llaves de Airtable
 const token = process.env.AIRTABLE_TOKEN;
 const baseId = process.env.AIRTABLE_BASE_ID;
 const tableName = process.env.AIRTABLE_TABLE_NAME || "Productos BIANI";
@@ -16,7 +14,7 @@ if (!token || !baseId) {
 const base = new Airtable({ apiKey: token }).base(baseId);
 const productos = [];
 
-console.log("Conectando con Airtable para traer los productos...");
+console.log("Conectando con Airtable...");
 
 base(tableName).select({
   view: "Grid view"
@@ -25,15 +23,16 @@ base(tableName).select({
   records.forEach(function(record) {
     const fields = record.fields;
     
+    // Si el registro no tiene nombre ni precio, lo saltamos para evitar errores
+    if (!fields["Name"]) return;
+
     productos.push({
       id: record.id,
-      nombre: fields["Nombre"] || fields["Producto"] || "Producto sin nombre",
-      descripcion: fields["Descripción"] || fields["Descripcion"] || "",
-      // Buscamos directamente tu columna "Precio"
-      precio: fields["Precio"] || 0, 
+      nombre: fields["Name"],
+      codigo: fields["Codigo"] || "",
+      precio: fields["Precio"] ? Number(fields["Precio"]) : 0, 
       imagen: fields["Imagen"] && fields["Imagen"].length > 0 ? fields["Imagen"][0].url : "https://via.placeholder.com/150",
-      categoria: fields["Categoría"] || fields["Categoria"] || "General",
-      disponible: fields["Disponible"] !== undefined ? fields["Disponible"] : true
+      categoria: fields["Categoria"] || "General"
     });
   });
 
@@ -55,5 +54,5 @@ base(tableName).select({
     'utf-8'
   );
 
-  console.log(`¡Éxito! Se procesaron ${productos.length} productos correctamente.`);
+  console.log(`¡Éxito! Se procesaron ${productos.length} productos.`);
 });
